@@ -34,6 +34,7 @@ fn main() -> io::Result<()> {
     let stdin = io::stdin();
     loop {
         print!("$ ");
+        io::stdout().flush().unwrap();
         let _ = stdin.read_line(&mut command_buf)?;
         command_buf.pop();
 
@@ -45,9 +46,11 @@ fn main() -> io::Result<()> {
                     let output = String::from_utf8(output).unwrap();
 
                     println!("{output}");
+                    io::stdout().flush().unwrap();
                 }
                 None => {
                     println!("{command}: not found");
+                    io::stdout().flush().unwrap();
                 }
             };
         };
@@ -55,9 +58,13 @@ fn main() -> io::Result<()> {
         let type_non_builtins = |command: String| {
             let exec = executables.iter().find(|x| x.to_string() == command);
             match exec {
-                Some(exec) => println!("{exec} is not build in",),
+                Some(exec) => {
+                    println!("{exec} is not build in");
+                    io::stdout().flush().unwrap();
+                }
                 None => {
                     println!("{command}: not found");
+                    io::stdout().flush().unwrap();
                 }
             };
         };
@@ -68,6 +75,7 @@ fn main() -> io::Result<()> {
             }
             ShellCommand::Echo(txt) => {
                 println!("{txt}");
+                io::stdout().flush().unwrap();
             }
             ShellCommand::Type(ref command) => {
                 let c = ShellCommand::from(command.clone());
@@ -83,6 +91,7 @@ fn main() -> io::Result<()> {
                 };
                 if let Some(c) = c {
                     println!("{c} is a shell builtin");
+                    io::stdout().flush().unwrap();
                 }
             }
             ShellCommand::Nothing => (),
@@ -90,7 +99,6 @@ fn main() -> io::Result<()> {
         };
 
         command_buf.clear();
-        io::stdout().flush().unwrap();
     }
     Ok(())
 }
