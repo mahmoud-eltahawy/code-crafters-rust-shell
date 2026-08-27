@@ -34,7 +34,6 @@ fn main() -> io::Result<()> {
     let stdin = io::stdin();
     loop {
         print!("$ ");
-        io::stdout().flush().unwrap();
         let _ = stdin.read_line(&mut command_buf)?;
         command_buf.pop();
 
@@ -91,6 +90,7 @@ fn main() -> io::Result<()> {
         };
 
         command_buf.clear();
+        io::stdout().flush().unwrap();
     }
     Ok(())
 }
