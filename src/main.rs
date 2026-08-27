@@ -108,6 +108,8 @@ fn main() -> io::Result<()> {
                 let path = path_buf.canonicalize().unwrap();
                 if path.exists() {
                     pwd = path;
+                } else {
+                    println!("cd: {}: No such file or directory", path.display());
                 }
             }
         };
