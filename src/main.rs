@@ -42,7 +42,7 @@ fn main() -> io::Result<()> {
                     exec.display()
                 ),
                 None => {
-                    println!("{command}: command not found");
+                    println!("{command}: not found");
                 }
             };
         };
