@@ -103,7 +103,10 @@ fn main() -> io::Result<()> {
             ShellCommand::Nothing => (),
             ShellCommand::Foreign { command, args } => exec_non_builtins(command, args),
             ShellCommand::Pwd => {
-                println!("{}", pwd.display());
+                let mut pwd = pwd.display().to_string();
+                pwd.ends_with('/');
+                pwd.pop();
+                println!("{}", pwd);
             }
             ShellCommand::Cd(path_buf) => {
                 if path_buf.is_absolute() && path_buf.exists() {
