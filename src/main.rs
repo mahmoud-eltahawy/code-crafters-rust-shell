@@ -104,8 +104,9 @@ fn main() -> io::Result<()> {
             ShellCommand::Foreign { command, args } => exec_non_builtins(command, args),
             ShellCommand::Pwd => {
                 let mut pwd = pwd.display().to_string();
-                pwd.ends_with('/');
-                pwd.pop();
+                if pwd.ends_with('/') {
+                    pwd.pop();
+                };
                 println!("{}", pwd);
             }
             ShellCommand::Cd(path_buf) => {
