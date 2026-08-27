@@ -98,7 +98,7 @@ impl From<String> for BuiltinCommand {
             Some(command) => match command {
                 "exit" => Self::Exit,
                 "echo" => Self::Echo(args.join(" ")),
-                "type" => Self::Type(args.first().unwrap().to_string()),
+                "type" => Self::Type(args.first().map(|x| x.to_string()).unwrap_or_default()),
                 _ => Self::Foreign {
                     command: command.to_string(),
                     _args: args.into_iter().map(|x| x.to_string()).collect(),
