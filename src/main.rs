@@ -1,14 +1,14 @@
 use std::os::unix::fs::PermissionsExt;
 use std::process::Command;
+use std::str::FromStr;
 use std::{
     io::{self, Write},
     path::PathBuf,
 };
 
-fn main() -> io::Result<()> {
+fn init_executables() -> io::Result<Vec<PathBuf>> {
     let paths = std::env::var("PATH").unwrap();
     let paths = paths.split(':').map(|x| x.parse::<PathBuf>().unwrap());
-
     let mut executables = Vec::new();
     for path in paths {
         let enteries = std::fs::read_dir(path)?;
@@ -21,6 +21,13 @@ fn main() -> io::Result<()> {
             }
         }
     }
+    Ok(executables)
+}
+
+fn main() -> io::Result<()> {
+    let executables = init_executables()?;
+
+    let pwd = PathBuf::from_str("./").unwrap().canonicalize().unwrap();
 
     let mut command_buf = String::new();
     let stdin = io::stdin();
@@ -85,6 +92,7 @@ fn main() -> io::Result<()> {
                         None
                     }
                     ShellCommand::Nothing => None,
+                    ShellCommand::Pwd => Some("pwd".to_string()),
                 };
                 if let Some(c) = c {
                     println!("{c} is a shell builtin");
@@ -92,6 +100,9 @@ fn main() -> io::Result<()> {
             }
             ShellCommand::Nothing => (),
             ShellCommand::Foreign { command, args } => exec_non_builtins(command, args),
+            ShellCommand::Pwd => {
+                println!("{}", pwd.display());
+            }
         };
 
         command_buf.clear();
@@ -105,6 +116,7 @@ enum ShellCommand {
     Exit,
     Echo(String),
     Type(String),
+    Pwd,
     Foreign { command: String, args: Vec<String> },
 }
 
@@ -117,6 +129,7 @@ impl From<String> for ShellCommand {
         match command {
             Some(command) => match command {
                 "exit" => Self::Exit,
+                "pwd" => Self::Pwd,
                 "echo" => Self::Echo(args.join(" ")),
                 "type" => Self::Type(args.first().map(|x| x.to_string()).unwrap_or_default()),
                 _ => Self::Foreign {
