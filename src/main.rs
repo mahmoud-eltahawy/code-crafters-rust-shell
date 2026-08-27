@@ -45,7 +45,7 @@ fn main() -> io::Result<()> {
                     let output = Command::new(command).args(args).output().unwrap().stdout;
                     let output = String::from_utf8(output).unwrap();
 
-                    println!("{output}");
+                    print!("{output}");
                     io::stdout().flush().unwrap();
                 }
                 None => {
