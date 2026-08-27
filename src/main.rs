@@ -104,14 +104,19 @@ fn main() -> io::Result<()> {
             ShellCommand::Pwd => {
                 println!("{}", pwd.display());
             }
-            ShellCommand::Cd(path_buf) => match path_buf.canonicalize() {
-                Ok(path) if path.exists() => {
-                    pwd = path;
+            ShellCommand::Cd(path_buf) => {
+                if path_buf.is_absolute() && path_buf.exists() {
+                    pwd = path_buf;
+                } else if path_buf.is_relative() {
+                    let mut pwd2 = pwd.clone();
+                    pwd2.push(path_buf.clone());
+                    if let Ok(pwd2) = pwd2.canonicalize() {
+                        pwd = pwd2;
+                    } else {
+                        println!("cd: {}: No such file or directory", path_buf.display())
+                    };
                 }
-                _ => {
-                    println!("cd: {}: No such file or directory", path_buf.display())
-                }
-            },
+            }
         };
 
         command_buf.clear();
