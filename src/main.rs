@@ -107,7 +107,7 @@ fn main() -> io::Result<()> {
             ShellCommand::Cd(path_buf) => {
                 if path_buf.is_absolute() && path_buf.exists() {
                     pwd = path_buf;
-                } else if path_buf.is_relative() {
+                } else {
                     let mut pwd2 = pwd.clone();
                     pwd2.push(path_buf.clone());
                     if let Ok(pwd2) = pwd2.canonicalize() {
@@ -147,7 +147,14 @@ impl From<String> for ShellCommand {
                 "pwd" => Self::Pwd,
                 "echo" => Self::Echo(args.join(" ")),
                 "type" => Self::Type(args.first().map(|x| x.to_string()).unwrap_or_default()),
-                "cd" => Self::Cd(args.first().map(|x| x.parse::<PathBuf>()).unwrap().unwrap()),
+                "cd" => Self::Cd(
+                    args.first()
+                        .map(|x| x.parse::<PathBuf>())
+                        .transpose()
+                        .ok()
+                        .flatten()
+                        .unwrap_or_default(),
+                ),
                 _ => Self::Foreign {
                     command: command.to_string(),
                     args: args.into_iter().map(|x| x.to_string()).collect(),
