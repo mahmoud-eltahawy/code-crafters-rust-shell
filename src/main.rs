@@ -37,8 +37,8 @@ fn main() -> io::Result<()> {
                 })
             });
             match exec {
-                Some(exec) => {
-                    let output = Command::new(exec).args(args).output().unwrap().stdout;
+                Some(_) => {
+                    let output = Command::new(command).args(args).output().unwrap().stdout;
                     let output = String::from_utf8(output).unwrap();
 
                     print!("{output}");
