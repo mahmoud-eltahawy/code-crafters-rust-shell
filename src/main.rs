@@ -10,6 +10,10 @@ fn main() -> io::Result<()> {
         command.pop();
         match command.as_str() {
             "exit" => break,
+            other if other.starts_with("echo") => {
+                let txt = other.strip_prefix("echo ").unwrap_or_default();
+                println!("{txt}");
+            }
             _ => {
                 println!("{command}: command not found");
             }
