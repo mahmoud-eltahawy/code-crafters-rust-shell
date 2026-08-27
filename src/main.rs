@@ -27,7 +27,7 @@ fn init_executables() -> io::Result<Vec<PathBuf>> {
 fn main() -> io::Result<()> {
     let executables = init_executables()?;
 
-    let pwd = PathBuf::from_str("./").unwrap().canonicalize().unwrap();
+    let mut pwd = PathBuf::from_str("./").unwrap().canonicalize().unwrap();
 
     let mut command_buf = String::new();
     let stdin = io::stdin();
@@ -93,6 +93,7 @@ fn main() -> io::Result<()> {
                     }
                     ShellCommand::Nothing => None,
                     ShellCommand::Pwd => Some("pwd".to_string()),
+                    ShellCommand::Cd(_) => Some("cd".to_string()),
                 };
                 if let Some(c) = c {
                     println!("{c} is a shell builtin");
@@ -102,6 +103,12 @@ fn main() -> io::Result<()> {
             ShellCommand::Foreign { command, args } => exec_non_builtins(command, args),
             ShellCommand::Pwd => {
                 println!("{}", pwd.display());
+            }
+            ShellCommand::Cd(path_buf) => {
+                let path = path_buf.canonicalize().unwrap();
+                if path.exists() {
+                    pwd = path;
+                }
             }
         };
 
@@ -116,6 +123,7 @@ enum ShellCommand {
     Exit,
     Echo(String),
     Type(String),
+    Cd(PathBuf),
     Pwd,
     Foreign { command: String, args: Vec<String> },
 }
@@ -132,6 +140,7 @@ impl From<String> for ShellCommand {
                 "pwd" => Self::Pwd,
                 "echo" => Self::Echo(args.join(" ")),
                 "type" => Self::Type(args.first().map(|x| x.to_string()).unwrap_or_default()),
+                "cd" => Self::Cd(args.first().map(|x| x.parse::<PathBuf>()).unwrap().unwrap()),
                 _ => Self::Foreign {
                     command: command.to_string(),
                     args: args.into_iter().map(|x| x.to_string()).collect(),
