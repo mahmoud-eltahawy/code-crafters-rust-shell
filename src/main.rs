@@ -32,7 +32,7 @@ fn main() -> io::Result<()> {
                             BuiltinCommand::Echo(_) => "echo",
                             BuiltinCommand::Type(_) => "type",
                         };
-                        println!("{c}: is a shell builtin");
+                        println!("{c} is a shell builtin");
                     }
                     Err(_) => {
                         println!("{command}: command not found");
