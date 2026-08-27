@@ -17,7 +17,15 @@ fn main() -> io::Result<()> {
             let metadata = entry.metadata()?;
             let exec = metadata.is_file() && (metadata.permissions().mode() & 0o111) != 0;
             if exec {
-                executables.push(entry.path());
+                executables.push(
+                    entry
+                        .path()
+                        .file_name()
+                        .unwrap()
+                        .to_str()
+                        .unwrap()
+                        .to_string(),
+                );
             }
         }
     }
@@ -31,11 +39,7 @@ fn main() -> io::Result<()> {
         command_buf.pop();
 
         let exec_non_builtins = |command: String, args: Vec<String>| {
-            let exec = executables.iter().find(|x| {
-                x.file_name().is_some_and(|x| {
-                    x.len() <= command.len() && *x.to_str().unwrap() == command[..x.len()]
-                })
-            });
+            let exec = executables.iter().find(|x| x.to_string() == command);
             match exec {
                 Some(_) => {
                     let output = Command::new(command).args(args).output().unwrap().stdout;
@@ -50,17 +54,9 @@ fn main() -> io::Result<()> {
         };
 
         let type_non_builtins = |command: String| {
-            let exec = executables.iter().find(|x| {
-                x.file_name().is_some_and(|x| {
-                    x.len() <= command.len() && *x.to_str().unwrap() == command[..x.len()]
-                })
-            });
+            let exec = executables.iter().find(|x| x.to_string() == command);
             match exec {
-                Some(exec) => println!(
-                    "{} is {}",
-                    exec.file_name().unwrap().to_str().unwrap(),
-                    exec.display()
-                ),
+                Some(exec) => println!("{exec} is not build in",),
                 None => {
                     println!("{command}: not found");
                 }
