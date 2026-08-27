@@ -1,4 +1,5 @@
 use std::os::unix::fs::PermissionsExt;
+use std::process::Command;
 use std::{
     io::{self, Write},
     path::PathBuf,
@@ -29,7 +30,26 @@ fn main() -> io::Result<()> {
         let _ = stdin.read_line(&mut command_buf)?;
         command_buf.pop();
 
-        let handle_non_builtins = |command: String| {
+        let exec_non_builtins = |command: String, args: Vec<String>| {
+            let exec = executables.iter().find(|x| {
+                x.file_name().is_some_and(|x| {
+                    x.len() <= command.len() && *x.to_str().unwrap() == command[..x.len()]
+                })
+            });
+            match exec {
+                Some(exec) => {
+                    let output = Command::new(exec).args(args).output().unwrap().stdout;
+                    let output = String::from_utf8(output).unwrap();
+
+                    println!("{output}");
+                }
+                None => {
+                    println!("{command}: not found");
+                }
+            };
+        };
+
+        let type_non_builtins = |command: String| {
             let exec = executables.iter().find(|x| {
                 x.file_name().is_some_and(|x| {
                     x.len() <= command.len() && *x.to_str().unwrap() == command[..x.len()]
@@ -46,32 +66,32 @@ fn main() -> io::Result<()> {
                 }
             };
         };
-        let command = BuiltinCommand::from(command_buf.clone());
+        let command = ShellCommand::from(command_buf.clone());
         match command {
-            BuiltinCommand::Exit => {
+            ShellCommand::Exit => {
                 break;
             }
-            BuiltinCommand::Echo(txt) => {
+            ShellCommand::Echo(txt) => {
                 println!("{txt}");
             }
-            BuiltinCommand::Type(ref command) => {
-                let c = BuiltinCommand::from(command.clone());
+            ShellCommand::Type(ref command) => {
+                let c = ShellCommand::from(command.clone());
                 let c = match c {
-                    BuiltinCommand::Exit => Some("exit".to_string()),
-                    BuiltinCommand::Echo(_) => Some("echo".to_string()),
-                    BuiltinCommand::Type(_) => Some("type".to_string()),
-                    BuiltinCommand::Foreign { command, .. } => {
-                        handle_non_builtins(command);
+                    ShellCommand::Exit => Some("exit".to_string()),
+                    ShellCommand::Echo(_) => Some("echo".to_string()),
+                    ShellCommand::Type(_) => Some("type".to_string()),
+                    ShellCommand::Foreign { command, .. } => {
+                        type_non_builtins(command);
                         None
                     }
-                    BuiltinCommand::Nothing => None,
+                    ShellCommand::Nothing => None,
                 };
                 if let Some(c) = c {
                     println!("{c} is a shell builtin");
                 }
             }
-            BuiltinCommand::Nothing => (),
-            BuiltinCommand::Foreign { command, .. } => handle_non_builtins(command),
+            ShellCommand::Nothing => (),
+            ShellCommand::Foreign { command, args } => exec_non_builtins(command, args),
         };
 
         command_buf.clear();
@@ -80,15 +100,15 @@ fn main() -> io::Result<()> {
 }
 
 #[derive(Debug)]
-enum BuiltinCommand {
+enum ShellCommand {
     Nothing,
     Exit,
     Echo(String),
     Type(String),
-    Foreign { command: String, _args: Vec<String> },
+    Foreign { command: String, args: Vec<String> },
 }
 
-impl From<String> for BuiltinCommand {
+impl From<String> for ShellCommand {
     fn from(value: String) -> Self {
         let value = value.trim();
         let mut args = value.split_whitespace();
@@ -101,7 +121,7 @@ impl From<String> for BuiltinCommand {
                 "type" => Self::Type(args.first().map(|x| x.to_string()).unwrap_or_default()),
                 _ => Self::Foreign {
                     command: command.to_string(),
-                    _args: args.into_iter().map(|x| x.to_string()).collect(),
+                    args: args.into_iter().map(|x| x.to_string()).collect(),
                 },
             },
             None => Self::Nothing,
