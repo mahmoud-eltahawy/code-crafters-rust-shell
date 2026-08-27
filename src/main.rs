@@ -41,7 +41,7 @@ fn main() -> io::Result<()> {
                     let output = Command::new(exec).args(args).output().unwrap().stdout;
                     let output = String::from_utf8(output).unwrap();
 
-                    println!("::{output}");
+                    println!("{output}");
                 }
                 None => {
                     println!("{command}: not found");
@@ -72,7 +72,7 @@ fn main() -> io::Result<()> {
                 break;
             }
             ShellCommand::Echo(txt) => {
-                println!("{txt}");
+                println!("::{txt}");
             }
             ShellCommand::Type(ref command) => {
                 let c = ShellCommand::from(command.clone());
