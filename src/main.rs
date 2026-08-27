@@ -7,6 +7,7 @@ fn main() -> io::Result<()> {
         print!("$ ");
         io::stdout().flush().unwrap();
         let _ = stdin.read_line(&mut command)?;
+        command.pop();
         println!("{command}: command not found");
     }
 }
