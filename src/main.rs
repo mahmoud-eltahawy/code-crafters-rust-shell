@@ -1,3 +1,4 @@
+use std::env::home_dir;
 use std::os::unix::fs::PermissionsExt;
 use std::process::Command;
 use std::str::FromStr;
@@ -149,10 +150,23 @@ impl From<String> for ShellCommand {
                 "type" => Self::Type(args.first().map(|x| x.to_string()).unwrap_or_default()),
                 "cd" => Self::Cd(
                     args.first()
-                        .map(|x| x.parse::<PathBuf>())
-                        .transpose()
-                        .ok()
-                        .flatten()
+                        .map(|x| {
+                            match ["~/", "~"]
+                                .iter()
+                                .map(|p| x.strip_prefix(p))
+                                .find_map(|x| x)
+                            {
+                                Some(rest) => {
+                                    let mut p = home_dir().unwrap();
+                                    p.push(rest);
+                                    p
+                                }
+                                None => {
+                                    let Ok(p) = x.parse::<PathBuf>();
+                                    p
+                                }
+                            }
+                        })
                         .unwrap_or_default(),
                 ),
                 _ => Self::Foreign {
