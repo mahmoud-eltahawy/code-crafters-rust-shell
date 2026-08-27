@@ -8,7 +8,13 @@ fn main() -> io::Result<()> {
         io::stdout().flush().unwrap();
         let _ = stdin.read_line(&mut command)?;
         command.pop();
-        println!("{command}: command not found");
+        match command.as_str() {
+            "exit" => break,
+            _ => {
+                println!("{command}: command not found");
+            }
+        }
         command.clear();
     }
+    Ok(())
 }
