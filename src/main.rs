@@ -17,15 +17,7 @@ fn main() -> io::Result<()> {
             let metadata = entry.metadata()?;
             let exec = metadata.is_file() && (metadata.permissions().mode() & 0o111) != 0;
             if exec {
-                executables.push(
-                    entry
-                        .path()
-                        .file_name()
-                        .unwrap()
-                        .to_str()
-                        .unwrap()
-                        .to_string(),
-                );
+                executables.push(entry.path());
             }
         }
     }
@@ -39,32 +31,38 @@ fn main() -> io::Result<()> {
         command_buf.pop();
 
         let exec_non_builtins = |command: String, args: Vec<String>| {
-            let exec = executables.iter().find(|x| x.to_string() == command);
+            let exec = executables.iter().find(|x| {
+                x.file_name().is_some_and(|x| {
+                    x.len() <= command.len() && *x.to_str().unwrap() == command[..x.len()]
+                })
+            });
             match exec {
-                Some(_) => {
-                    let output = Command::new(command).args(args).output().unwrap().stdout;
+                Some(exec) => {
+                    let output = Command::new(exec).args(args).output().unwrap().stdout;
                     let output = String::from_utf8(output).unwrap();
 
                     print!("{output}");
-                    io::stdout().flush().unwrap();
                 }
                 None => {
                     println!("{command}: not found");
-                    io::stdout().flush().unwrap();
                 }
             };
         };
 
         let type_non_builtins = |command: String| {
-            let exec = executables.iter().find(|x| x.to_string() == command);
+            let exec = executables.iter().find(|x| {
+                x.file_name().is_some_and(|x| {
+                    x.len() <= command.len() && *x.to_str().unwrap() == command[..x.len()]
+                })
+            });
             match exec {
-                Some(exec) => {
-                    println!("{exec} is not build in");
-                    io::stdout().flush().unwrap();
-                }
+                Some(exec) => println!(
+                    "{} is {}",
+                    exec.file_name().unwrap().to_str().unwrap(),
+                    exec.display()
+                ),
                 None => {
                     println!("{command}: not found");
-                    io::stdout().flush().unwrap();
                 }
             };
         };
@@ -75,7 +73,6 @@ fn main() -> io::Result<()> {
             }
             ShellCommand::Echo(txt) => {
                 println!("{txt}");
-                io::stdout().flush().unwrap();
             }
             ShellCommand::Type(ref command) => {
                 let c = ShellCommand::from(command.clone());
@@ -91,7 +88,6 @@ fn main() -> io::Result<()> {
                 };
                 if let Some(c) = c {
                     println!("{c} is a shell builtin");
-                    io::stdout().flush().unwrap();
                 }
             }
             ShellCommand::Nothing => (),
