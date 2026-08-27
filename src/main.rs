@@ -1,13 +1,12 @@
-use std::io::{self, Read, Write};
+use std::io::{self, Write};
 
 fn main() -> io::Result<()> {
-    let mut buf = [0; 1024];
-    let mut stdin = io::stdin();
+    let mut command = String::new();
+    let stdin = io::stdin();
     loop {
         print!("$ ");
         io::stdout().flush().unwrap();
-        let len = stdin.read(&mut buf)?;
-        let command = String::from_utf8(buf[..len].to_vec()).unwrap();
+        let _ = stdin.read_line(&mut command)?;
         println!("{command}: command not found");
     }
 }
