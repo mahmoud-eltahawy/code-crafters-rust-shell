@@ -9,5 +9,6 @@ fn main() -> io::Result<()> {
         let _ = stdin.read_line(&mut command)?;
         command.pop();
         println!("{command}: command not found");
+        command.clear();
     }
 }
