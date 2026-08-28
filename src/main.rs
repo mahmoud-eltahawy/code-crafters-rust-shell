@@ -66,10 +66,13 @@ fn main() -> io::Result<()> {
                 break;
             }
             ShellCommand::Echo(txt) => {
-                let txt = txt.iter().fold(String::new(), |acc, c| match c {
+                let mut txt = txt.iter().fold(String::new(), |acc, c| match c {
                     Word::Quated(x) => acc + " " + x,
                     Word::NonQuated(x) => acc + x,
                 });
+                if txt.starts_with(" ") {
+                    txt = txt[1..].to_string();
+                };
                 println!("{txt}",);
             }
             ShellCommand::Type(ref command) => {
