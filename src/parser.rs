@@ -75,8 +75,10 @@ fn pwd(input: &str) -> IResult<&str, ShellCommand> {
 }
 
 fn quated(input: &str) -> IResult<&str, &str> {
-    let double = delimited(char('\"'), is_not("\""), char('\"'));
-    let single = delimited(char('\''), is_not("\'"), char('\''));
+    let double = is_not("\"");
+    let single = is_not("'");
+    let double = delimited(char('"'), double, char('"'));
+    let single = delimited(char('\''), single, char('\''));
     alt((double, single)).parse(input)
 }
 
@@ -198,6 +200,10 @@ pub fn quated_test() {
     dbg!(rest);
     let (rest, single) = quated(r#"'exit hello' world"#).unwrap();
     dbg!(rest);
+    let (rest, esc) = quated(r#"'exit "hello"' world"#).unwrap();
+    dbg!(rest);
     assert!(double == "exit hello");
     assert!(single == "exit hello");
+    dbg!(esc);
+    assert!(esc == r#"exit "hello""#);
 }
