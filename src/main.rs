@@ -70,7 +70,7 @@ fn main() -> io::Result<()> {
                     .iter()
                     .map(|x| x.to_string())
                     .collect::<Vec<_>>()
-                    .join("");
+                    .join(" ");
                 println!("{txt}",);
             }
             ShellCommand::Type(ref command) => {
