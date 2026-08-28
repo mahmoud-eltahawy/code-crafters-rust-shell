@@ -5,10 +5,10 @@ use crate::Word;
 
 use super::ShellCommand;
 use nom::branch::alt;
-use nom::bytes::complete::{tag, take_until, take_while1};
+use nom::bytes::complete::{tag, take_until, take_while};
 use nom::bytes::is_not;
 use nom::character::char;
-use nom::character::complete::multispace0;
+use nom::character::complete::{multispace0, multispace1};
 use nom::combinator::{not, opt};
 use nom::sequence::delimited;
 use nom::{IResult, Parser};
@@ -77,17 +77,26 @@ fn pwd(input: &str) -> IResult<&str, ShellCommand> {
 }
 
 fn char_seq(input: &str) -> IResult<&str, Word> {
-    let (rest, word) = take_while1(|x: char| !x.is_whitespace())(input)?;
+    let (rest, word) = take_while(|x: char| !x.is_whitespace())(input)?;
     Ok((rest, Word::NonQuated(String::from(" ") + word)))
 }
 
 fn quated(input: &str) -> IResult<&str, Word> {
+    let (spaced, input) = match multispace1::<&str, nom::error::Error<&str>>(input) {
+        Ok((rest, _)) => (true, rest),
+        Err(_) => (false, input),
+    };
     let double = is_not("\"");
     let single = is_not("'");
     let double = delimited(char('"'), double, char('"'));
     let single = delimited(char('\''), single, char('\''));
     let (rest, word) = alt((double, single)).parse(input)?;
-    Ok((rest, Word::Quated(word.to_string())))
+    let word = if spaced {
+        Word::QuatedSpaced(word.to_string())
+    } else {
+        Word::QuatedNonSpaced(word.to_string())
+    };
+    Ok((rest, word))
 }
 
 fn echo(input: &str) -> IResult<&str, ShellCommand> {
@@ -99,7 +108,6 @@ fn echo(input: &str) -> IResult<&str, ShellCommand> {
     while let Ok((new_rest, (txt, _))) = parser.parse(rest) {
         rest = new_rest;
         let txt = match txt {
-            Word::Quated(x) => Word::Quated(x),
             Word::NonQuated(x) => {
                 if first_non_quated {
                     let x = x[1..].to_string();
@@ -109,6 +117,8 @@ fn echo(input: &str) -> IResult<&str, ShellCommand> {
                     Word::NonQuated(x)
                 }
             }
+            Word::QuatedSpaced(x) => Word::QuatedSpaced(x),
+            Word::QuatedNonSpaced(x) => Word::QuatedNonSpaced(x),
         };
         txts.push(txt);
     }

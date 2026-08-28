@@ -67,13 +67,13 @@ fn main() -> io::Result<()> {
             }
             ShellCommand::Echo(txt) => {
                 let mut txt = txt.iter().fold(String::new(), |acc, c| match c {
-                    Word::Quated(x) => acc + " " + x,
-                    Word::NonQuated(x) => acc + x,
+                    Word::QuatedSpaced(x) => acc + " " + x,
+                    Word::QuatedNonSpaced(x) | Word::NonQuated(x) => acc + x,
                 });
                 if txt.starts_with(" ") {
                     txt = txt[1..].to_string();
                 };
-                println!("{txt}",);
+                println!("{txt}");
             }
             ShellCommand::Type(ref command) => {
                 let (_, c) = parse_builtin_command_name(command).unwrap();
@@ -124,14 +124,16 @@ enum ShellCommand {
 
 #[derive(Debug)]
 enum Word {
-    Quated(String),
+    QuatedSpaced(String),
+    QuatedNonSpaced(String),
     NonQuated(String),
 }
 
 impl Display for Word {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let x = match self {
-            Word::Quated(x) => x,
+            Word::QuatedSpaced(x) => x,
+            Word::QuatedNonSpaced(x) => x,
             Word::NonQuated(x) => x,
         };
         write!(f, "{x}")
