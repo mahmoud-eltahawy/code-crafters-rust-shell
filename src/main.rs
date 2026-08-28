@@ -65,7 +65,7 @@ fn main() -> io::Result<()> {
                 break;
             }
             ShellCommand::Echo(txt) => {
-                println!("{txt}");
+                println!("{txt}", txt = txt.join(""));
             }
             ShellCommand::Type(ref command) => {
                 let (_, c) = parse_builtin_command_name(command).unwrap();
@@ -107,7 +107,7 @@ fn main() -> io::Result<()> {
 enum ShellCommand {
     Nothing,
     Exit,
-    Echo(String),
+    Echo(Vec<String>),
     Type(String),
     Cd(PathBuf),
     Pwd,

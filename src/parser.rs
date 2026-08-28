@@ -84,9 +84,15 @@ fn quated(input: &str) -> IResult<&str, &str> {
 
 fn echo(input: &str) -> IResult<&str, ShellCommand> {
     let (rest, _) = tag("echo")(input)?;
-    let (rest, _) = multispace0(rest)?;
-    let (rest, txt) = quated(rest)?;
-    Ok((rest, ShellCommand::Echo(txt.to_string())))
+    let (mut rest, _) = multispace0(rest)?;
+    let mut txts = Vec::new();
+    while let Ok((new_rest, txt)) = quated(rest) {
+        rest = new_rest;
+        txts.push(txt.to_string());
+        let (new_rest, _) = multispace0(rest)?;
+        rest = new_rest;
+    }
+    Ok((rest, ShellCommand::Echo(txts)))
 }
 
 fn typep(input: &str) -> IResult<&str, ShellCommand> {
@@ -162,7 +168,13 @@ pub fn echo_test() {
     let ShellCommand::Echo(txt) = single else {
         panic!("expectd echo varient");
     };
-    assert!(txt == "hello world");
+    assert!(txt.first().unwrap() == "hello world");
+    let (rest, single) = echo("echo 'hello world' ' hello again'").unwrap();
+    assert!(rest.is_empty());
+    let ShellCommand::Echo(txt) = single else {
+        panic!("expectd echo varient");
+    };
+    assert!(txt == ["hello world", " hello again"]);
 }
 
 #[test]
