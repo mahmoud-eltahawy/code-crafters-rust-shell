@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use std::os::unix::fs::PermissionsExt;
 use std::process::Command;
 use std::str::FromStr;
@@ -65,7 +66,12 @@ fn main() -> io::Result<()> {
                 break;
             }
             ShellCommand::Echo(txt) => {
-                println!("{txt}", txt = txt.join(""));
+                let txt = txt
+                    .iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<_>>()
+                    .join("");
+                println!("{txt}",);
             }
             ShellCommand::Type(ref command) => {
                 let (_, c) = parse_builtin_command_name(command).unwrap();
@@ -107,9 +113,25 @@ fn main() -> io::Result<()> {
 enum ShellCommand {
     Nothing,
     Exit,
-    Echo(Vec<String>),
+    Echo(Vec<Word>),
     Type(String),
     Cd(PathBuf),
     Pwd,
     Foreign { command: String, args: Vec<String> },
+}
+
+#[derive(Debug)]
+enum Word {
+    Quated(String),
+    NonQuated(String),
+}
+
+impl Display for Word {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let x = match self {
+            Word::Quated(x) => x,
+            Word::NonQuated(x) => x,
+        };
+        write!(f, "{x}")
+    }
 }

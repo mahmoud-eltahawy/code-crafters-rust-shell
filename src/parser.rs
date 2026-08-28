@@ -1,9 +1,11 @@
 use std::env::home_dir;
 use std::path::PathBuf;
 
+use crate::Word;
+
 use super::ShellCommand;
 use nom::branch::alt;
-use nom::bytes::complete::{tag, take_until};
+use nom::bytes::complete::{tag, take_until, take_while1};
 use nom::bytes::is_not;
 use nom::character::char;
 use nom::character::complete::multispace0;
@@ -74,23 +76,28 @@ fn pwd(input: &str) -> IResult<&str, ShellCommand> {
     tag("pwd")(input).map(|(rest, _)| (rest, ShellCommand::Pwd))
 }
 
-fn quated(input: &str) -> IResult<&str, &str> {
+fn char_seq(input: &str) -> IResult<&str, Word> {
+    let (rest, word) = take_while1(|x: char| !x.is_whitespace())(input)?;
+    Ok((rest, Word::NonQuated(String::from(" ") + word)))
+}
+
+fn quated(input: &str) -> IResult<&str, Word> {
     let double = is_not("\"");
     let single = is_not("'");
     let double = delimited(char('"'), double, char('"'));
     let single = delimited(char('\''), single, char('\''));
-    alt((double, single)).parse(input)
+    let (rest, word) = alt((double, single)).parse(input)?;
+    Ok((rest, Word::Quated(word.to_string())))
 }
 
 fn echo(input: &str) -> IResult<&str, ShellCommand> {
     let (rest, _) = tag("echo")(input)?;
     let (mut rest, _) = multispace0(rest)?;
     let mut txts = Vec::new();
-    while let Ok((new_rest, txt)) = quated(rest) {
+    let mut parser = (alt((quated, char_seq)), multispace0);
+    while let Ok((new_rest, (txt, _))) = parser.parse(rest) {
         rest = new_rest;
-        txts.push(txt.to_string());
-        let (new_rest, _) = multispace0(rest)?;
-        rest = new_rest;
+        txts.push(txt);
     }
     Ok((rest, ShellCommand::Echo(txts)))
 }
@@ -168,13 +175,21 @@ pub fn echo_test() {
     let ShellCommand::Echo(txt) = single else {
         panic!("expectd echo varient");
     };
-    assert!(txt.first().unwrap() == "hello world");
+    assert!(txt.first().unwrap().to_string() == "hello world");
     let (rest, single) = echo("echo 'hello world' ' hello again'").unwrap();
     assert!(rest.is_empty());
     let ShellCommand::Echo(txt) = single else {
         panic!("expectd echo varient");
     };
+    let txt = txt.iter().map(|x| x.to_string()).collect::<Vec<_>>();
     assert!(txt == ["hello world", " hello again"]);
+    let (rest, single) = echo("echo hello world").unwrap();
+    assert!(rest.is_empty());
+    let ShellCommand::Echo(txt) = single else {
+        panic!("expectd echo varient");
+    };
+    let txt = txt.iter().map(|x| x.to_string()).collect::<Vec<_>>();
+    assert!(dbg!(txt) == [" hello", " world"]);
 }
 
 #[test]
@@ -214,8 +229,7 @@ pub fn quated_test() {
     dbg!(rest);
     let (rest, esc) = quated(r#"'exit "hello"' world"#).unwrap();
     dbg!(rest);
-    assert!(double == "exit hello");
-    assert!(single == "exit hello");
-    dbg!(esc);
-    assert!(esc == r#"exit "hello""#);
+    assert!(double.to_string() == "exit hello");
+    assert!(single.to_string() == "exit hello");
+    assert!(esc.to_string() == r#"exit "hello""#);
 }
