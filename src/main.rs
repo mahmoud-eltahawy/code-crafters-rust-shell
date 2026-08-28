@@ -66,11 +66,10 @@ fn main() -> io::Result<()> {
                 break;
             }
             ShellCommand::Echo(txt) => {
-                let txt = txt
-                    .iter()
-                    .map(|x| x.to_string())
-                    .collect::<Vec<_>>()
-                    .join(" ");
+                let txt = txt.iter().fold(String::new(), |acc, c| match c {
+                    Word::Quated(x) => acc + " " + x,
+                    Word::NonQuated(x) => acc + x,
+                });
                 println!("{txt}",);
             }
             ShellCommand::Type(ref command) => {
