@@ -95,8 +95,21 @@ fn echo(input: &str) -> IResult<&str, ShellCommand> {
     let (mut rest, _) = multispace0(rest)?;
     let mut txts = Vec::new();
     let mut parser = (alt((quated, char_seq)), multispace0);
+    let mut first_non_quated = true;
     while let Ok((new_rest, (txt, _))) = parser.parse(rest) {
         rest = new_rest;
+        let txt = match txt {
+            Word::Quated(x) => Word::Quated(x),
+            Word::NonQuated(x) => {
+                if first_non_quated {
+                    let x = x[1..].to_string();
+                    first_non_quated = false;
+                    Word::NonQuated(x)
+                } else {
+                    Word::NonQuated(x)
+                }
+            }
+        };
         txts.push(txt);
     }
     Ok((rest, ShellCommand::Echo(txts)))
@@ -189,7 +202,7 @@ pub fn echo_test() {
         panic!("expectd echo varient");
     };
     let txt = txt.iter().map(|x| x.to_string()).collect::<Vec<_>>();
-    assert!(dbg!(txt) == [" hello", " world"]);
+    assert!(dbg!(txt) == ["hello", " world"]);
 }
 
 #[test]
