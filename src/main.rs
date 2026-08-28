@@ -1,4 +1,3 @@
-use std::env::home_dir;
 use std::os::unix::fs::PermissionsExt;
 use std::process::Command;
 use std::str::FromStr;
@@ -6,6 +5,9 @@ use std::{
     io::{self, Write},
     path::PathBuf,
 };
+
+use crate::parser::{parse_builtin_command_name, parse_command};
+mod parser;
 
 fn init_executables() -> io::Result<Vec<PathBuf>> {
     let paths = std::env::var("PATH").unwrap();
@@ -57,24 +59,7 @@ fn main() -> io::Result<()> {
             };
         };
 
-        let type_non_builtins = |command: String| {
-            let exec = executables.iter().find(|x| {
-                x.file_name().is_some_and(|x| {
-                    x.len() <= command.len() && *x.to_str().unwrap() == command[..x.len()]
-                })
-            });
-            match exec {
-                Some(exec) => println!(
-                    "{} is {}",
-                    exec.file_name().unwrap().to_str().unwrap(),
-                    exec.display()
-                ),
-                None => {
-                    println!("{command}: not found");
-                }
-            };
-        };
-        let command = ShellCommand::from(command_buf.clone());
+        let (_, command) = parse_command(&command_buf).unwrap();
         match command {
             ShellCommand::Exit => {
                 break;
@@ -83,20 +68,9 @@ fn main() -> io::Result<()> {
                 println!("{txt}");
             }
             ShellCommand::Type(ref command) => {
-                let c = ShellCommand::from(command.clone());
-                let c = match c {
-                    ShellCommand::Exit => Some("exit".to_string()),
-                    ShellCommand::Echo(_) => Some("echo".to_string()),
-                    ShellCommand::Type(_) => Some("type".to_string()),
-                    ShellCommand::Foreign { command, .. } => {
-                        type_non_builtins(command);
-                        None
-                    }
-                    ShellCommand::Nothing => None,
-                    ShellCommand::Pwd => Some("pwd".to_string()),
-                    ShellCommand::Cd(_) => Some("cd".to_string()),
-                };
-                if let Some(c) = c {
+                let (_, c) = parse_builtin_command_name(command).unwrap();
+                let c = c.to_string().to_lowercase();
+                if !c.is_empty() {
                     println!("{c} is a shell builtin");
                 }
             }
@@ -138,47 +112,4 @@ enum ShellCommand {
     Cd(PathBuf),
     Pwd,
     Foreign { command: String, args: Vec<String> },
-}
-
-impl From<String> for ShellCommand {
-    fn from(value: String) -> Self {
-        let value = value.trim();
-        let mut args = value.split_whitespace();
-        let command = args.next();
-        let args = args.collect::<Vec<_>>();
-        match command {
-            Some(command) => match command {
-                "exit" => Self::Exit,
-                "pwd" => Self::Pwd,
-                "echo" => Self::Echo(args.join(" ")),
-                "type" => Self::Type(args.first().map(|x| x.to_string()).unwrap_or_default()),
-                "cd" => Self::Cd(
-                    args.first()
-                        .map(|x| {
-                            match ["~/", "~"]
-                                .iter()
-                                .map(|p| x.strip_prefix(p))
-                                .find_map(|x| x)
-                            {
-                                Some(rest) => {
-                                    let mut p = home_dir().unwrap();
-                                    p.push(rest);
-                                    p
-                                }
-                                None => {
-                                    let Ok(p) = x.parse::<PathBuf>();
-                                    p
-                                }
-                            }
-                        })
-                        .unwrap_or_default(),
-                ),
-                _ => Self::Foreign {
-                    command: command.to_string(),
-                    args: args.into_iter().map(|x| x.to_string()).collect(),
-                },
-            },
-            None => Self::Nothing,
-        }
-    }
 }
